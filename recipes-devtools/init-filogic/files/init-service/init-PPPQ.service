@@ -1,0 +1,12 @@
+[Unit]
+Description=Init PPPQ 
+DefaultDependencies=no
+After=CcspPandMSsp.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/sbin/init-PPPQ.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

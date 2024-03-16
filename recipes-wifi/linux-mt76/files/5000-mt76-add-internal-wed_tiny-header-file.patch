@@ -1,0 +1,146 @@
+From 1430e7a7a3d5ae7693d6fa8e795524ee4c78c0ef Mon Sep 17 00:00:00 2001
+From: Shayne Chen <shayne.chen@mediatek.com>
+Date: Mon, 7 Nov 2022 23:05:51 +0800
+Subject: [PATCH] mt76: add internal wed_tiny header file
+
+To prevent build fail of WED related parts.
+
+Change-Id: I907cae30e0775337a0c670010b450be15b510e18
+---
+ mt76.h     |  4 ++++
+ wed_tiny.h | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 35 insertions(+)
+ create mode 100644 wed_tiny.h
+
+diff --git a/mt76.h b/mt76.h
+index a3cf0d95..5edb986b 100755
+--- a/mt76.h
++++ b/mt76.h
+@@ -13,7 +13,11 @@
+ #include <linux/leds.h>
+ #include <linux/usb.h>
+ #include <linux/average.h>
++#ifdef CONFIG_NET_MEDIATEK_SOC_WED
+ #include <linux/soc/mediatek/mtk_wed.h>
++#else
++#include "wed_tiny.h"
++#endif
+ #include <net/mac80211.h>
+ #include "util.h"
+ #include "testmode.h"
+diff --git a/wed_tiny.h b/wed_tiny.h
+new file mode 100644
+index 00000000..91c98e7d
+--- /dev/null
++++ b/wed_tiny.h
+@@ -0,0 +1,110 @@
++#ifndef __WED_TINY_H
++#define __WED_TINY_H
++
++#include <linux/pci.h>
++
++#define MTK_WED_TX_QUEUES		2
++#define MTK_WED_RX_QUEUES		2
++
++struct mtk_wed_device {
++	const struct mtk_wed_ops *ops;
++	struct device *dev;
++	struct mtk_wed_hw *hw;
++	bool init_done, running;
++	int wdma_idx;
++	int irq;
++	u8 ver;
++	u32 rev_id;
++
++	struct {
++		int size;
++		struct page_frag_cache rx_page;
++		struct mtk_rxbm_desc *desc;
++		dma_addr_t desc_phys;
++	} rx_buf_ring;
++
++	struct {
++		
++		void __iomem *rro_desc;
++		dma_addr_t miod_desc_phys;
++		dma_addr_t fdbk_desc_phys;
++		u32 mcu_view_miod;
++	} rro;
++
++	/* filled by driver: */
++	struct {
++		union {
++			struct platform_device *platform_dev;
++			struct pci_dev *pci_dev;
++		};
++		void __iomem *base;
++		u32 bus_type;
++		u32 phy_base;
++
++		u32 wpdma_phys;
++		u32 wpdma_int;
++		u32 wpdma_mask;
++		u32 wpdma_tx;
++		u32 wpdma_txfree;
++		u32 wpdma_rx_glo;
++		u32 wpdma_rx;
++
++		u8 tx_tbit[MTK_WED_TX_QUEUES];
++		u8 rx_tbit[MTK_WED_RX_QUEUES];
++		u8 txfree_tbit;
++
++		u16 token_start;
++		unsigned int nbuf;
++		unsigned int rx_nbuf;
++		unsigned int rx_npkt;
++		unsigned int rx_size;
++
++		bool wcid_512;
++
++		u32 (*init_buf)(void *ptr, dma_addr_t phys, int token_id);
++		int (*offload_enable)(struct mtk_wed_device *wed);
++		void (*offload_disable)(struct mtk_wed_device *wed);
++		u32 (*init_rx_buf)(struct mtk_wed_device *wed,
++				   int pkt_num);
++		void (*release_rx_buf)(struct mtk_wed_device *wed);
++
++		void (*ser_trigger)(struct mtk_wed_device *wed);
++	} wlan;
++	struct completion fe_reset_done;
++	struct completion wlan_reset_done;
++	atomic_t fe_reset;
++};
++
++static inline int
++mtk_wed_device_attach(struct mtk_wed_device *dev)
++{
++        int ret = -ENODEV;
++        return ret;
++}
++
++static inline bool mtk_wed_device_active(struct mtk_wed_device *dev)
++{
++        return false;
++}
++
++static inline bool
++mtk_wed_get_rx_capa(struct mtk_wed_device *dev)
++{
++	return false;
++}
++
++#define mtk_wed_device_detach(_dev) do {} while (0)
++#define mtk_wed_device_start(_dev, _mask) do {} while (0)
++#define mtk_wed_device_stop(_dev) do {} while (0)
++#define mtk_wed_device_tx_ring_setup(_dev, _ring, _regs, _reset) -ENODEV
++#define mtk_wed_device_txfree_ring_setup(_dev, _ring, _regs) -ENODEV
++#define mtk_wed_device_rx_ring_setup(_dev, _ring, _regs, _reset) -ENODEV
++#define mtk_wed_device_reg_read(_dev, _reg) 0
++#define mtk_wed_device_reg_write(_dev, _reg, _val) do {} while (0)
++#define mtk_wed_device_irq_get(_dev, _mask) 0
++#define mtk_wed_device_irq_set_mask(_dev, _mask) do {} while (0)
++#define mtk_wed_device_dma_reset(_dev) do {} while (0)
++#define mtk_wed_device_ppe_check(_dev, _skb, _reason, _hash) do {} while (0)
++#define mtk_wed_device_update_msg(_dev, _id, _msg, _len) -ENODEV
++
++#endif
