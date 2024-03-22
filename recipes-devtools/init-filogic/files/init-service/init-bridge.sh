@@ -15,7 +15,6 @@ then
 brctl addif brlan0 eth1
 else
 brctl addif brlan0 lan0
-brctl addif brlan0 lan1
 brctl addif brlan0 lan2
 brctl addif brlan0 lan3
 brctl addif brlan0 lan4
